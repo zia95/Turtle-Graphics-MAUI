@@ -4,6 +4,11 @@ VisualStudioVersion = 17.0.31611.283
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TurtleGraphicsBlazor", "TurtleGraphicsBlazor\TurtleGraphicsBlazor.csproj", "{7E25616F-DEE8-437D-8A2D-845AF472000C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7681481E-293D-4456-AF2C-FACBA09C7896}"
+	ProjectSection(SolutionItems) = preProject
+		publish-andriod.ps1 = publish-andriod.ps1
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
