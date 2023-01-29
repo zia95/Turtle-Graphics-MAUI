@@ -1,0 +1,48 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager nav;
+@inject TurtleService ts;
+
+<div class="page">
+	<div class="sidebar rz-background-color-primary">
+		<div onclick=@(()=>nav_on_click(NavPage.Commands)) class=@($"rz-ripple rz-shadow-10 {nav_get_clr(NavPage.Commands)}") style="border-bottom-left-radius:.5rem; border-bottom-right-radius:.5rem;text-align:center; width:32%;height:90%;">
+			<RadzenIcon Icon="psychology" Style="font-size:3rem;" />
+		</div>
+		<div onclick=@(()=>nav_on_click(NavPage.Home)) class=@($"rz-ripple rz-shadow-10 {nav_get_clr(NavPage.Home)}") Style="border-bottom-left-radius:.5rem; border-bottom-right-radius:.5rem; text-align:center; width:32%;height:90%;">
+			<RadzenIcon Icon="draw" Style="font-size:3rem;" />
+		</div>
+		<div onclick=@(()=>nav_on_click(NavPage.Settings)) class=@($"rz-ripple rz-shadow-10 {nav_get_clr(NavPage.Settings)}") Style="border-bottom-left-radius:.5rem; border-bottom-right-radius:.5rem;text-align:center; width:32%;height:90%;">
+			<RadzenIcon Icon="settings" Style="font-size:3rem;" />
+		</div>
+		
+	</div>
+
+	<main>
+		<RadzenDialog />
+		<RadzenNotification />
+		<RadzenContextMenu />
+		<RadzenTooltip />
+
+		<article class="bodycontainer content">
+			@Body
+		</article>
+	</main>
+</div>
+
+@code{
+	enum NavPage { Home, Commands, Settings };
+	NavPage _nav_active_page = NavPage.Home;
+
+	string nav_get_clr(NavPage navpage) => navpage == _nav_active_page ? "rz-background-color-primary" : "rz-background-color-series-8";
+
+	void nav_on_click(NavPage navpage)
+	{
+		if(ts.NavigationBlocked)
+		{
+			ts.NavigationBlockedCallback?.Invoke();
+			return;
+		}
+
+		_nav_active_page = navpage;
+		nav.NavigateTo(navpage switch { NavPage.Home => "/", NavPage.Commands => "commandlist", NavPage.Settings => "settings" });
+	}
+}

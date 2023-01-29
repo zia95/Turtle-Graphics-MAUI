@@ -1,0 +1,129 @@
+﻿@inject TurtleService ts
+@inject DialogService ds
+
+
+<RadzenCard>
+
+    <div style="display:flex; flex-direction:column; justify-content:center;">
+        <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Command</RadzenText>
+        <RadzenDropDown Style="margin-bottom:1em;" TValue="string" Data=_command_items Change=@(args => command_on_change(args.ToString())) />
+
+        @if (TurtleCommandList.CheckIfCommandRequiresParameter(_selected_command))
+        {
+            if (_selected_command == TurtleCommandList.CommandTypes.PenColor)
+            {
+                <RadzenColorPicker Change=@pencolor_on_change ShowHSV=false ShowRGBA=false ShowColors=true ShowButton=false>
+                    @for (int i = 28; i < 167; i++)
+                    {
+                        <RadzenColorPickerItem Value=@System.Drawing.ColorTranslator.ToHtml(System.Drawing.Color.FromKnownColor((System.Drawing.KnownColor)i)) />
+                    }
+                </RadzenColorPicker>
+            }
+            else
+            {
+                <RadzenNumeric TValue="int" Min="1" @bind-Value=_iparam />
+            }
+        }
+    </div>
+
+
+    <div style="display:flex; justify-content:space-between; margin-top:1em">
+        <RadzenButton Icon="check_circle" Text="OK" Click="on_accept" />
+        <RadzenButton Icon="cancel" Text="Cancel" Click="()=> ds.Close(null)" />
+    </div>
+    
+</RadzenCard>
+
+
+@code {
+
+    [Parameter]
+    public TurtleCommandList CommandList { get; set; }
+
+
+
+    private List<string> _command_items;
+
+    protected override void OnInitialized()
+    {
+        _command_items = new List<string>();
+        _command_items = Enum.GetNames(typeof(TurtleCommandList.CommandTypes)).ToList();
+        _command_items.RemoveAt(0);//remove 'none'
+    }
+
+
+    private TurtleCommandList.CommandTypes _selected_command = TurtleCommandList.CommandTypes.None;
+    private string _clr_param = null;
+    private int _iparam = 100;
+
+    void command_on_change(string value)
+    {
+        _selected_command = (TurtleCommandList.CommandTypes)Enum.Parse(typeof(TurtleCommandList.CommandTypes), value, true);
+    }
+    void pencolor_on_change(string value)
+    {
+        _clr_param = value;
+    }
+
+    int color_to_idx(string clr)
+    {
+        var sc_str = Radzen.Blazor.Rendering.RGB.Parse(clr);
+        for (int i = 28; i < 167; i++)
+        {
+            var c = System.Drawing.ColorTranslator.ToHtml(System.Drawing.Color.FromKnownColor((System.Drawing.KnownColor)i));
+            var c_str = Radzen.Blazor.Rendering.RGB.Parse(c);
+            if (c_str.Red == sc_str.Red && 
+                c_str.Green == sc_str.Green && 
+                c_str.Blue == sc_str.Blue)
+            {
+                return i;
+            }
+        }
+        return 1;
+    }
+
+    void on_accept()
+    {
+        if(_selected_command == TurtleCommandList.CommandTypes.None)
+        {
+            ds.Alert("Set the input first.", "Info");
+            return;
+        }
+
+        TurtleCommandList.TurtleCommand cmd = null;
+        if (TurtleCommandList.CheckIfCommandRequiresParameter(_selected_command))
+        {
+            if (_selected_command == TurtleCommandList.CommandTypes.PenColor)
+            {
+                if(_clr_param == null)
+                {
+                    ds.Alert("Color is not selected.", "Info");
+                    return;
+                }
+                cmd = new TurtleCommandList.TurtleCommand(_selected_command, color_to_idx(_clr_param));
+            }
+            else
+            {
+                cmd = new TurtleCommandList.TurtleCommand(_selected_command, _iparam);
+            }
+        }
+        else
+        {
+            cmd = new TurtleCommandList.TurtleCommand(_selected_command, 0);
+        }
+
+        if(cmd.IsValid)
+        {
+            ds.Close(cmd);
+        }
+        else
+        {
+            ds.Alert("Invalid input.");
+        }
+    }
+
+    public static async Task<TurtleCommandList.TurtleCommand> ShowDialog(DialogService ds, TurtleCommandList param)
+    {
+        return await ds.OpenAsync<AddCommandDialog>("Add Command", new Dictionary<string, object>() { { "CommandList", param } });
+    }
+}

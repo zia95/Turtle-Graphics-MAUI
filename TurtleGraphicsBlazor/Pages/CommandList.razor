@@ -1,0 +1,47 @@
+﻿@page "/commandlist"
+@page "/commandlist/{EditListId}"
+
+@inject TurtleService ts
+
+@if(load_viewer())
+{
+    <CommandListViewer />
+}
+else
+{
+    <CommandListEditor CommandListIndex="_tcmdlst_toedit" />
+}
+
+
+@code {
+    [Parameter]
+    public string EditListId { get; set; }
+
+    private int _tcmdlst_toedit = -1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ts.CommandListCount <= 0)
+        {
+            await ts.RefreshCommandListAsync();
+        }
+    }
+
+    private bool load_viewer()
+    {
+        if(int.TryParse(EditListId, out int v))
+        {
+            _tcmdlst_toedit = v;
+
+            
+            return false;
+        }
+        else if (EditListId is not null and "new")
+        {
+            _tcmdlst_toedit = -1;
+            return false;
+        }
+
+        return true;
+    }
+}

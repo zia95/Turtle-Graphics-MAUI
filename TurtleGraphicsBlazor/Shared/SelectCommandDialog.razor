@@ -1,0 +1,37 @@
+﻿@inject TurtleService ts;
+@inject DialogService ds;
+
+<div style="padding-bottom:3rem; display:flex; flex-direction:column; justify-content:stretch;">
+    @if (ts.CommandListCount <= 0)
+    {
+        <RadzenText>Loading...</RadzenText>
+    }
+    else
+    {
+        for (int i = 0; i < ts.CommandListCount; i++)
+        {
+            int k = i;
+            <RadzenButton Style="margin-bottom:.5rem;" Click="()=>on_click_cmd_list(k)" Text=@ts.GetCommandList(i).ListName ButtonStyle="ButtonStyle.Light" />
+        }
+    }
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        if (ts.CommandListCount <= 0)
+        {
+            await ts.RefreshCommandListAsync();
+        }
+    }
+    void on_click_cmd_list(int idx)
+    {
+        ds.CloseSide((int?)idx);
+    }
+
+    public static async Task<int?> ShowSideDialog(DialogService ds)
+    {
+        return await ds.OpenSideAsync<SelectCommandDialog>("Command", null, 
+        new SideDialogOptions { Position = DialogPosition.Left, ShowMask = false, Width = "70%" });
+    }
+}

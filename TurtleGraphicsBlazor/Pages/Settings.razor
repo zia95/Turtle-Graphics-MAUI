@@ -1,0 +1,160 @@
+﻿@page "/settings"
+
+@inject TurtleService ts
+
+@if (ts.AppSettings is null)
+{
+	<p class="def_txt_clr">Loading...</p>
+}
+else
+{
+
+	<!-- volume contols... -->
+	<RadzenCard Style="display:flex; margin-top:5px; margin-bottom:5px;">
+		<div style="width:64px; height:64px;">
+
+			@if (ts.AppSettings.Volume > (AppSettings.VolumeMax / 2))
+			{
+				<RadzenIcon Icon="volume_up" IconStyle="IconStyle.Primary" Style="width:64px; height: 64px; font-size:xx-large;" />
+			}
+			else if (ts.AppSettings.Volume is <= (AppSettings.VolumeMax / 2) and > AppSettings.VolumeMin)
+			{
+				<RadzenIcon Icon="volume_down" IconStyle="IconStyle.Primary" Style="width:64px; height: 64px; font-size:xx-large;" />
+			}
+			else if (ts.AppSettings.Volume <= AppSettings.VolumeMin)
+			{
+				<RadzenIcon Icon="volume_off" IconStyle="IconStyle.Primary" Style="width:64px; height: 64px; font-size:xx-large;" />
+			}
+		</div>
+		<div style="width:90%;  display:flex; flex-direction:column; align-items:center; justify-content:space-evenly;">
+			<RadzenText Style="font-weight:bold">Volume</RadzenText>
+			<RadzenSlider @bind-Value=@(ts.AppSettings.Volume) TValue="int" Step="1" Min=@AppSettings.VolumeMin Max=@AppSettings.VolumeMax />
+		</div>
+	</RadzenCard>
+
+
+	<!--turtle image path id-->
+	
+	<RadzenCard Style="display:flex; flex-direction:column; margin-top:5px; margin-bottom:5px;">
+		<RadzenText Style="font-weight:bold; text-align:center;">Turtle</RadzenText>
+		<div style="display:flex; flex-wrap:wrap; justify-content:center; align-items:center;">
+
+			@for(int i = AppSettings.TurtleImageIdMin; i <= AppSettings.TurtleImageIdMax; i++)
+			{
+				int k = i;
+				if(ts.AppSettings.TurtleImageId == k)
+				{
+					<RadzenButton Image=@($"/res/img/turtle/{k}.png") Style="margin:5px;" ButtonStyle="ButtonStyle.Primary" Click=@(()=>ts.AppSettings.TurtleImageId=k)>
+						<RadzenImage Path=@($"/res/img/turtle/{k}.png") Style="width:64px; height: 64px;" />
+					</RadzenButton>
+				}
+				else
+				{
+					<RadzenButton Image=@($"/res/img/turtle/{k}.png") Style="margin:5px;" ButtonStyle="ButtonStyle.Light" Click=@(()=>ts.AppSettings.TurtleImageId=k)>
+						<RadzenImage Path=@($"/res/img/turtle/{k}.png") Style="width:64px; height: 64px;" />
+					</RadzenButton>
+				}
+
+			}
+			
+		</div>
+		
+	</RadzenCard>
+
+
+	<!--turtle speed-->
+	<RadzenCard Style="display:flex; margin-top:5px; margin-bottom:5px;">
+		<div style="width:64px; height:64px;">
+			<RadzenIcon Icon="speed" IconStyle="IconStyle.Primary" Style="width:64px; height: 64px; font-size:xx-large;" />
+		</div>
+		<div style="width:90%;  display:flex; flex-direction:column; align-items:center; justify-content:space-evenly;">
+			<RadzenText Style="font-weight:bold;">Speed</RadzenText>
+			<RadzenSelectBar @bind-Value=@(ts.AppSettings.TurtleSpeed) TValue="int">
+				<Items>
+					<RadzenSelectBarItem Text="Fast" Value=@AppSettings.TurtleSpeedFast />
+					<RadzenSelectBarItem Text="Medium" Value=@AppSettings.TurtleSpeedMedium />
+					<RadzenSelectBarItem Text="Slow" Value=@AppSettings.TurtleSpeedSlow />
+				</Items>
+			</RadzenSelectBar>
+		</div>
+	</RadzenCard>
+
+
+	<!-- size and visibility -->
+	<RadzenCard Style="display:flex; margin-top:5px; margin-bottom:5px;">
+		<div style="width:64px; height:64px;">
+
+			@if (ts.AppSettings.TurtleImageSize == 0)
+			{
+				<div style="width:64px; height:64px; display:flex; align-items:center; justify-content:center;">
+					<RadzenIcon Icon="visibility_off" IconStyle="IconStyle.Primary" Style="font-size:xx-large;" />
+				</div>
+			}
+			else if (ts.AppSettings.TurtleImageSize == 1)
+			{
+				<div style="width:64px; height:64px; display:flex; align-items:center; justify-content:center;">
+					<img src=@($"/res/img/turtle/{ts.AppSettings.TurtleImageId}.png") style="width:32px; height: 32px;" />
+				</div>
+			}
+			else if (ts.AppSettings.TurtleImageSize == 2)
+			{
+				<div style="width:64px; height:64px; display:flex; align-items:center; justify-content:center;">
+					<img src=@($"/res/img/turtle/{ts.AppSettings.TurtleImageId}.png") style="width:48px; height: 48px;" />
+				</div>
+			}
+			else if (ts.AppSettings.TurtleImageSize == 3)
+			{
+				<div style="width:64px; height:64px; display:flex; align-items:center; justify-content:center;">
+					<img src=@($"/res/img/turtle/{ts.AppSettings.TurtleImageId}.png") style="width:64px; height: 64px;" />
+				</div>
+			}
+
+		</div>
+		<div style="width:90%;  display:flex; flex-direction:column; align-items:center; justify-content:space-evenly;">
+			<RadzenText Style="font-weight:bold">Turtle Size</RadzenText>
+			<RadzenSlider @bind-Value=@(ts.AppSettings.TurtleImageSize) TValue="int" Step="1" Min="0" Max="3" />
+		</div>
+	</RadzenCard>
+
+
+
+	<!-- pensize contols... -->
+	<RadzenCard Style="display:flex; margin-top:5px; margin-bottom:5px;">
+		<div style="width:64px; height:64px;">
+			<RadzenIcon Icon="border_color" IconStyle="IconStyle.Primary" Style="width:64px; height:64px; font-size:xx-large;" />
+		</div>
+		<div style="width:90%;  display:flex; flex-direction:column; align-items:center; justify-content:space-evenly;">
+			<RadzenText Style="font-weight:bold">Pen Size</RadzenText>
+			<RadzenSlider @bind-Value=@(ts.AppSettings.PenSize) TValue="int" Step="1" Min=@AppSettings.PenSizeMin Max=@AppSettings.PenSizeMax />
+		</div>
+	</RadzenCard>
+
+	<!-- pen color... -->
+	<RadzenCard Style="display:flex; justify-content:space-evenly; align-items:center; margin-top:5px; margin-bottom:5px;">
+		<RadzenText Style="font-weight:bold;">Pen Color</RadzenText>
+		<RadzenColorPicker Style="width:stretch;" @bind-Value=@(ts.AppSettings.CanvasColor) Change=@on_color_change ShowHSV=false ShowRGBA=false ShowColors=true ShowButton=false>
+		@for (int i = 28; i < 167; i++)
+		{
+			<RadzenColorPickerItem Value=@System.Drawing.ColorTranslator.ToHtml(System.Drawing.Color.FromKnownColor((System.Drawing.KnownColor)i)) />
+		}
+	</RadzenColorPicker>
+	</RadzenCard>
+
+	<!--about  -->
+	<RadzenCard Style="text-align:center; margin-top:5px; margin-bottom:5px;">
+		<RadzenText Style="font-weight:bold;">About</RadzenText>
+		<RadzenText>Turtle graphics app is made by 2byteapps.</RadzenText>
+		<RadzenLink Path="https://play.google.com/store/apps/details?id=com.x2byteapps.turtlegraphics2" Icon="shop" Text="Go to Play Store" target="_blank" />
+	</RadzenCard>
+}
+
+@code {
+
+	 
+
+	private void on_color_change(string e)
+	{
+		ts.AppSettings.CanvasColor = e;
+	}
+
+}

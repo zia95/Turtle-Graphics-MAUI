@@ -1,0 +1,104 @@
+﻿@page "/"
+@using Blazor.Extensions.Canvas
+@inject TurtleService ts
+@inject DialogService ds
+<div style="position:absolute; background-color:transparent; top:8vh; bottom:0; left:0; right:0;">
+    
+    <div class="rz-shadow-10; " style="border-radius:1rem;width:100%; height:90%;">
+        <TurtleGraphicsCanvas @ref="_canvas" BusyOrIdle="set_is_canvas_busy" />
+
+    </div>
+
+    <div class="rz-background-color-series-8" style="background-color:transparent; padding:.5rem; height:10%; width:100%; display:grid; grid-template-columns:1fr 1fr 1fr">
+
+        <RadzenButton Click=on_click_play Style="border-bottom-right-radius:0;border-top-right-radius:0;">
+            <RadzenIcon Icon="play_circle" Style="font-size:xx-large;" />
+            <span class="rz-button-text" style="margin-left:.5rem;">Play</span>
+        </RadzenButton>
+        
+        <RadzenButton Click=on_click_load_command Style="border-bottom-left-radius:0;border-top-left-radius:0;border-bottom-right-radius:0;border-top-right-radius:0;">
+            <RadzenIcon Icon="download" Style="font-size:xx-large;" />
+            <span class="rz-button-text" style="margin-left:.5rem;">Load</span>
+        </RadzenButton>
+        <RadzenButton Style="border-bottom-left-radius:0;border-top-left-radius:0;" Click=canvas_reset>
+            <RadzenIcon Icon="restart_alt" Style="font-size:xx-large;" />
+            <span class="rz-button-text" style="margin-left:.5rem;">Reset</span>
+        </RadzenButton>
+
+    </div>
+</div>
+
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        if (ts.AppSettings is null)
+        {
+            await ts.LoadSettingsFromStorageAsync();
+        }
+        else
+        {
+            await ts.UpdateSettingsInStorageAsync();
+        }
+        await ts.UpdateCommandListAsync();
+    }
+
+
+    private TurtleGraphicsCanvas _canvas;
+
+    bool _is_busy;
+    int _loaded_cmd_index = -1;
+
+
+    private void set_is_canvas_busy(bool isbusy)
+    {
+        _is_busy = isbusy;
+        if(_is_busy)
+        {
+            ts.BlockNavigation(() => ds.Alert("Busy, Let all the tasks finish first.", "Wait"));
+        }
+        else
+        {
+            ts.UnblockNavigation();
+        }
+    }
+    async Task on_click_load_command()
+    {
+        int? idx = await SelectCommandDialog.ShowSideDialog(ds);
+        if(idx.HasValue)
+        {
+            _loaded_cmd_index = idx.Value;
+        }
+    }
+    async Task on_click_play()
+    {
+        if (_loaded_cmd_index < 0)
+        {
+            await on_click_load_command();
+            if (_loaded_cmd_index < 0)
+                return;
+        }
+
+        await canvas_run_command(_loaded_cmd_index);
+    }
+    async Task canvas_reset()
+    {
+        if (_is_busy)
+        {
+            await ds.Alert("Busy, Let all the tasks finish first.", "Wait");
+            if (_is_busy) return;
+        }
+
+        await _canvas.ResetCanvas();
+    }
+    async Task canvas_run_command(int i)
+    {
+        if(_is_busy)
+        {
+            await ds.Alert("Busy, Let all the tasks finish first.", "Wait");
+            if (_is_busy) return;
+        }
+        await _canvas.RunFromTurtleCommandListAsync(i);
+    }
+
+}

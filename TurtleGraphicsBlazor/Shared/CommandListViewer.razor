@@ -1,0 +1,97 @@
+﻿@inject TurtleService ts
+@inject NavigationManager nav
+
+
+<div style="display:flex; flex-direction:column;">
+
+
+    <div style="text-align:right;">
+    
+        <RadzenLink  Path="commandlist/new" Text="New">
+            <RadzenButton Icon="add" Style="font-size:xx-large;"  />
+        </RadzenLink>
+    </div>
+
+
+    @if (ts.CommandListCount > 0)
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="text-align:left;">#</th>
+                    <th style="text-align:center;">Name</th>
+                    <th style="text-align:center;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < ts.CommandListCount; i++)
+                {
+                    int k = i;
+                    if (i < ts.CommandListPresetCount)
+                    {
+                        <tr>
+                            <td style="text-align:left;"> PRESET</td>
+                            <td style="text-align:center;"> @ts.GetCommandList(i).ListName.Truncate(10)</td>
+                            <td style="text-align:right;">
+                                <RadzenSplitButton Disabled="true" Click=@(args => edit_on_click(args, k)) Text="Edit" Icon="edit">
+                                    <ChildContent>
+                                        <RadzenSplitButtonItem Text="Delete" Value="1" Icon="delete" />
+                                        <RadzenSplitButtonItem Text="Move Up" Value="2" Icon="move_up" />
+                                        <RadzenSplitButtonItem Text="Move Down" Value="3" Icon="move_down" />
+                                    </ChildContent>
+                                </RadzenSplitButton>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        <tr>
+                            <td style="text-align:left;"> @(i + 1 - ts.CommandListPresetCount)</td>
+                            <td style="text-align:center;"> @ts.GetCommandList(i).ListName.Truncate(10)</td>
+                            <td style="text-align:right;">
+                                <RadzenSplitButton Click=@(args => edit_on_click(args, k)) Text="Edit" Icon="edit">
+                                    <ChildContent>
+                                        <RadzenSplitButtonItem Text="Delete" Value="1" Icon="delete" />
+                                        <RadzenSplitButtonItem Text="Move Up" Value="2" Icon="move_up" />
+                                        <RadzenSplitButtonItem Text="Move Down" Value="3" Icon="move_down" />
+                                    </ChildContent>
+                                </RadzenSplitButton>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p class="def_txt_clr">Loading...</p>
+    }
+
+
+
+
+</div>
+
+@code {
+
+    void edit_on_click(RadzenSplitButtonItem item, int idx)
+    {
+        if(item is null)
+        {
+            nav.NavigateTo($"commandlist/{idx}", false);
+        }
+        else if(item.Value is "1") //delete
+        {
+            ts.DeleteCommandList(idx);
+        }
+        else if (item.Value is "2") //move up
+        {
+            ts.MoveCommandListUp(idx);
+        }
+        else if (item.Value is "3") //move down
+        {
+            ts.MoveCommandListDown(idx);
+        }
+    }
+}

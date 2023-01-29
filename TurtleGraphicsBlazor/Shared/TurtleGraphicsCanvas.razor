@@ -1,0 +1,352 @@
+﻿@inject IJSRuntime JS
+@inject TurtleService ts
+
+
+<!--
+<div id="canvas-container" style="height:100%; width:100%; border: 1px solid black; text-align:center; background-color:saddlebrown;">
+</div>
+-->
+@if (ShowTurtle)
+{
+    <img style="
+            display: flex;
+            position: absolute;
+            z-index: 1;
+            -webkit-transform: @($"rotate({_turtle.Angle}deg)");
+            -moz-transform:    @($"rotate({_turtle.Angle}deg)");
+            -ms-transform:     @($"rotate({_turtle.Angle}deg)");
+            -o-transform:      @($"rotate({_turtle.Angle}deg)");
+            transform:         @($"rotate({_turtle.Angle}deg)");
+            margin-left: @($"{_turtle_margin_left}px");
+            margin-top:  @($"{_turtle_margin_top}px");"
+        src="@_turtle_img_id"
+            width="@(TurtleSize.Width)" height="@(TurtleSize.Height)" />
+        
+}
+
+
+<BECanvas @ref="_canvas" Width="400" Height="400"></BECanvas>
+
+@code {
+    private BECanvasComponent _canvas;
+
+    private Canvas2DContext _context;
+
+    public int Width { get; private set; }
+    public int Height { get; private set; }
+
+    [Parameter]
+    public EventCallback<bool> BusyOrIdle { get; set; } 
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+
+        if(firstRender)
+        {
+            await BusyOrIdle.InvokeAsync(true);
+            this._context = await _canvas.CreateCanvas2DAsync();
+            await this.refresh_async();
+            await BusyOrIdle.InvokeAsync(false);
+
+        }
+
+    }
+
+    private async Task refresh_async()
+    {
+        try
+        {
+            var i = await JS.InvokeAsync<int[]>("refresh_canvas");
+            this.Width = i[0];
+            this.Height = i[1];
+
+            turtle_set_default_settings();
+
+
+            await apply_settings();
+        }
+        catch(Exception e)
+        {
+            string m = e.Message;
+
+        }
+    }
+    public async Task ResetCanvas()
+    {
+        await BusyOrIdle.InvokeAsync(true);
+        await this.refresh_async();
+        await BusyOrIdle.InvokeAsync(false);
+    }
+
+    private async Task apply_settings()
+    {
+        if(ts.AppSettings is null)
+        {
+            await ts.LoadSettingsFromStorageAsync();
+        }
+        _turtle_img_id = $"/res/img/turtle/{ts.AppSettings.TurtleImageId}.png";
+
+        if(ts.AppSettings.TurtleImageSize != 0)
+        {
+
+            int _tsiz = ts.AppSettings.TurtleImageSize switch { 1 => 32, 2 => 48, 3 => 64, _=>throw new NotImplementedException("size not implemented!") };
+
+            _turtle.Size = new System.Drawing.Size(_tsiz, _tsiz);
+
+            this.ShowTurtle = true;
+        }
+        else
+        {
+            this.ShowTurtle = false;
+        }
+
+        _pen.PenSize = ts.AppSettings.PenSize;
+        _turtle.Delay = ts.AppSettings.TurtleSpeed;
+
+        //set canvas color
+        //var clr = get_color(ts.AppSettings.CanvasColor);
+        //await _context.SetFillStyleAsync(System.Drawing.ColorTranslator.ToHtml(clr));
+        await _context.SetFillStyleAsync(ts.AppSettings.CanvasColor);
+        await _context.FillRectAsync(0, 0, Width, Height);
+
+        StateHasChanged();
+    }
+
+    #region turtle methods
+
+    #region script
+
+
+    private System.Drawing.Color get_color(int val)
+    {
+        //return System.Drawing.Color.FromKnownColor((System.Drawing.KnownColor)new Random().Next(28, 167));
+        if(val is > (167 - 28))
+        {
+            throw new ArgumentException($"color value is invalid. it should be between 0-{167-28}. current value is {val}");
+        }
+        var clr = System.Drawing.Color.FromKnownColor((System.Drawing.KnownColor)(28 + val));
+        return clr;
+    }
+
+    public async Task RunFromTurtleCommandListAsync(int idx)
+    {
+        await BusyOrIdle.InvokeAsync(true);
+        var l = ts.GetCommandList(idx);
+
+        for(int i = 0; i < l.Commands.Count; i++)
+        {
+            if (l.Commands[i].Command == TurtleCommandList.CommandTypes.Repeat)
+            {
+                //one less loop bcz it will reset back to 'repeat' + 1 index
+                for (int j = 1; j < l.Commands[i].Parameter; j++)
+                {
+                    int curr_pos = i;
+
+                    while(l.Commands[++curr_pos].Command is not TurtleCommandList.CommandTypes.End)
+                    {
+                        switch (l.Commands[curr_pos].Command)
+                        {
+                            case TurtleCommandList.CommandTypes.Forward: await Forward(l.Commands[curr_pos].Parameter); break;
+                            case TurtleCommandList.CommandTypes.Backward: await Backward(l.Commands[curr_pos].Parameter); break;
+                            case TurtleCommandList.CommandTypes.PenColor: PenColor = get_color(l.Commands[curr_pos].Parameter); break;
+                            case TurtleCommandList.CommandTypes.Left: await Left(l.Commands[curr_pos].Parameter); break;
+                            case TurtleCommandList.CommandTypes.Right: await Right(l.Commands[curr_pos].Parameter); break;
+                            case TurtleCommandList.CommandTypes.PenUp:            PenUp(); break;
+                            case TurtleCommandList.CommandTypes.PenDown:          PenDown(); break;
+                        };
+                    }
+                }
+            }
+            else
+            {
+                switch (l.Commands[i].Command)
+                {
+                    case TurtleCommandList.CommandTypes.Forward: await Forward(l.Commands[i].Parameter); break;
+                    case TurtleCommandList.CommandTypes.Backward: await Backward(l.Commands[i].Parameter); break;
+                    case TurtleCommandList.CommandTypes.PenColor: PenColor = get_color(l.Commands[i].Parameter); break;
+                    case TurtleCommandList.CommandTypes.Left: await Left(l.Commands[i].Parameter); break;
+                    case TurtleCommandList.CommandTypes.Right: await Right(l.Commands[i].Parameter); break;
+                    case TurtleCommandList.CommandTypes.PenUp: PenUp(); break;
+                    case TurtleCommandList.CommandTypes.PenDown: PenDown(); break;
+                };
+            }
+        }
+        await BusyOrIdle.InvokeAsync(false);
+    }
+    #endregion
+
+
+    private (System.Drawing.PointF Position, System.Drawing.Size Size, float Angle, bool ShowTurtle, int Delay) _turtle;
+    private (bool PenVisible, System.Drawing.Color PenColor, float PenSize) _pen;
+
+    private string _turtle_img_id;
+
+    public System.Drawing.PointF TurtlePosition
+    {
+        get
+        {
+            return _turtle.Position;
+        }
+    }
+    public System.Drawing.Size TurtleSize
+    {
+        get
+        {
+            return _turtle.Size;
+        }
+    }
+    public float TurtleAngle
+    {
+        get
+        {
+            return _turtle.Angle;
+        }
+    }
+    public bool ShowTurtle
+    {
+        get
+        {
+            return _turtle.ShowTurtle;
+        }
+        set
+        {
+            _turtle.ShowTurtle = value;
+            StateHasChanged();
+        }
+    }
+
+    public int Delay
+    {
+        get
+        {
+            return _turtle.Delay;
+        }
+        set
+        {
+            _turtle.Delay = value;
+        }
+    }
+
+    public bool IsPenDown
+    {
+        get
+        {
+            return _pen.PenVisible;
+        }
+    }
+    public System.Drawing.Color PenColor
+    {
+        get
+        {
+            return _pen.PenColor;
+        }
+        set
+        {
+            _pen.PenColor = value;
+        }
+    }
+    public float PenSize
+    {
+        get
+        {
+            return _pen.PenSize;
+        }
+        set
+        {
+            _pen.PenSize = value;
+        }
+    }
+
+    private int _turtle_margin_top;
+    private int _turtle_margin_left;
+
+
+    private void turtle_set_default_settings()
+    {
+        _turtle = (new System.Drawing.PointF(0.0f, 0.0f), new System.Drawing.Size(32, 32), 0, true, 100);
+        _pen = (true, System.Drawing.Color.Blue, 7.0f);
+    }
+
+    public async Task Forward(float distance = 10)
+    {
+        var angleRadians = _turtle.Angle * Math.PI / 180;
+        var newX = _turtle.Position.X + (float)(distance * Math.Sin(angleRadians));
+        var newY = _turtle.Position.Y + (float)(distance * Math.Cos(angleRadians));
+        await MoveTo(newX, newY);
+    }
+
+    public async Task Backward(float distance = 10)
+    {
+        await Forward(-distance);
+    }
+
+    public async Task MoveTo(float newX, float newY)
+    {
+        var fromX = Width / 2 + _turtle.Position.X;
+        var fromY = Height / 2 - _turtle.Position.Y;
+
+        _turtle.Position.X = newX;
+        _turtle.Position.Y = newY;
+        if (_pen.PenVisible)
+        {
+            var toX = Width / 2 + _turtle.Position.X;
+            var toY = Height / 2 - _turtle.Position.Y;
+            
+            await _context.SetLineCapAsync(LineCap.Round);
+            await _context.BeginPathAsync();
+            await _context.SetLineWidthAsync(_pen.PenSize);
+            await _context.SetStrokeStyleAsync(System.Drawing.ColorTranslator.ToHtml(_pen.PenColor));
+            await _context.MoveToAsync(fromX, fromY);
+            await _context.LineToAsync(toX, toY);
+            await _context.StrokeAsync();
+            await _context.ClosePathAsync();
+        }
+
+        await render_turtle_image();
+    }
+
+    public async Task Left(float angleDelta)
+    {
+        await RotateTo(_turtle.Angle - angleDelta);
+    }
+    public async Task Right(float angleDelta)
+    {
+        await RotateTo(_turtle.Angle + angleDelta);
+    }
+    public async Task Rotate(float angleDelta)
+    {
+        await RotateTo(_turtle.Angle + angleDelta);
+    }
+
+    public async Task RotateTo(float newAngle)
+    {
+        _turtle.Angle = newAngle % 360;
+        if (_turtle.Angle < 0)
+        {
+            _turtle.Angle += 360;
+        }
+        await render_turtle_image();
+    }
+
+    public void PenUp() => _pen.PenVisible = false;
+
+    public void PenDown() => _pen.PenVisible = true;
+
+    private async Task render_turtle_image()
+    {
+        await Task.Delay(_turtle.Delay);
+
+        var turtleX = 1 + Width / 2 + _turtle.Position.X - _turtle.Size.Width / 2;
+        var turtleY = 1 + Height / 2 - _turtle.Position.Y - _turtle.Size.Height / 2;
+
+
+        _turtle_margin_left = (int)Math.Round(turtleX);
+        _turtle_margin_top = (int)Math.Round(turtleY);
+
+        // re-render the image which is our turtle.
+        // can't draw image in canvas becaause image can't be cleared 
+        // without affecting the trail
+        StateHasChanged();
+    }
+    #endregion
+}

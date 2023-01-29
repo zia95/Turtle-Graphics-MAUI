@@ -1,0 +1,181 @@
+﻿@inject TurtleService ts
+@inject DialogService ds
+@inject NavigationManager nav
+
+
+<div class="def_txt_clr" style="display:flex; align-items:center; justify-content:space-evenly">
+    <label> Name: </label>
+    <RadzenTextBox @bind-Value=@(CommandList.ListName)></RadzenTextBox>
+</div>
+
+
+<div style="display:flex; justify-content:space-between; margin-top:1em;">
+
+    
+    <RadzenButton Click=go_back Text="Back">
+        <RadzenIcon Icon="keyboard_backspace" Style="font-size:xx-large;" />
+    </RadzenButton>
+    <div style="text-align:right;">
+        <RadzenButton Click=save_list Text="Save" >
+            <RadzenIcon Icon="save" Style="font-size:xx-large;" />
+        </RadzenButton>
+
+        <RadzenButton Click=add_to_list Text="Add">
+            <RadzenIcon Icon="add" Style="font-size:xx-large;" />
+        </RadzenButton>
+    </div>
+    
+</div>
+
+@if (CommandList is not null)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="text-align:left;"> # </th>
+                <th style="text-align:center;"> Command</th>
+                <th style="text-align:center;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < CommandList.Commands.Count; i++)
+            {
+                int k = i;
+
+                <tr>
+                    <td style="text-align:left;">@(i + 1)</td>
+
+                    @if (TurtleCommandList.CheckIfCommandRequiresParameter(CommandList.Commands[i].Command) && 
+                    CommandList.Commands[i].Command != TurtleCommandList.CommandTypes.PenColor)
+                    {
+                        <td style="text-align:center;">@($"{CommandList.Commands[i].Command}:{CommandList.Commands[i].Parameter}")</td>
+                    }
+                    else
+                    {
+                        <td style="text-align:center;">@($"{CommandList.Commands[i].Command}")</td>
+                    }
+
+                    <td style ="text-align:right;">
+                        <RadzenSplitButton Click=@(args => on_click_del_command(args, k)) Text="Delete" Icon="delete">
+                            <ChildContent>
+                            <RadzenSplitButtonItem Text="Move Up" Value="2" Icon="move_up" />
+                            <RadzenSplitButtonItem Text="Move Down" Value="3" Icon="move_down" />
+                            </ChildContent>
+                        </RadzenSplitButton>
+                    </td>
+                </tr>
+                
+            }
+        </tbody>
+    </table>
+}
+@code {
+
+
+
+
+
+
+    [Parameter]
+    public int CommandListIndex { get; set; }
+
+    private TurtleCommandList CommandList;
+    private bool _edit_mode = false;
+
+    protected override void OnParametersSet()
+    {
+        _edit_mode = CommandList != null;
+
+        if (CommandListIndex > 0)
+        {
+            CommandList = clone_list(ts.GetCommandList(CommandListIndex));
+            _edit_mode = true;
+        }
+        else
+        {
+            CommandList = new TurtleCommandList("");
+            _edit_mode = false;
+        }
+    }
+
+    TurtleCommandList clone_list(TurtleCommandList tcl)
+    {
+        if (tcl == null || tcl.AreAllRepeatCommandValid() == false) throw new ArgumentException("list is not valid.");
+
+        TurtleCommandList clone = new TurtleCommandList(tcl.ListName);
+
+        foreach(var itm in tcl.Commands)
+        {
+            if(!clone.Add(itm.Command, itm.Parameter))
+            {
+                throw new ArgumentException("list item is not valid.");
+            }
+        }
+        return clone;
+    }
+
+    void on_click_del_command(RadzenSplitButtonItem item, int idx)
+    {
+        if (item is null)
+        {
+            CommandList.Commands.RemoveAt(idx);
+        }
+        else if (item.Value is "1") //move up
+        {
+            CommandList.Commands.MoveItemUpAt(idx);
+        }
+        else if (item.Value is "2") //move down
+        {
+            CommandList.Commands.MoveItemDownAt(idx);
+        }
+    }
+
+    private async Task go_back()
+    {
+        nav.NavigateTo("commandlist", false, true);
+    }
+
+    private async Task add_to_list()
+    {
+        var d = await AddCommandDialog.ShowDialog(ds, this.CommandList);
+
+        if (d == null)
+            return;
+
+        if (d.IsValid)
+        {
+            this.CommandList.Commands.Add(d);
+        }
+        else
+        {
+            await ds.Alert("Failed to add the command. Because it is not valid.", "Failed");
+        }
+    }
+
+    private async Task save_list()
+    {
+        if(CommandList.Commands.Count <= 0)
+        {
+            await ds.Alert("The list is empty.", "Error");
+        }
+        if(string.IsNullOrWhiteSpace(CommandList.ListName))
+        {
+            await ds.Alert("List name is not valid.", "Failed");
+        }
+
+        if (CommandList.AreAllRepeatCommandValid())
+        {
+            if(_edit_mode)
+            {
+                ts.DeleteCommandList(CommandListIndex);
+            }
+
+            ts.AddCommandList(CommandList);
+            nav.NavigateTo("commandlist", false, true);
+        }
+        else
+        {
+            await ds.Alert("Failed to save. Make sure all the repeat & end statements are in order and their are no nested loops.", "Failed");
+        }
+    }
+}
